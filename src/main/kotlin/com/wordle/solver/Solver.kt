@@ -13,7 +13,8 @@ class Solver {
 
     // The number of times each letter occurs in the word list
     private val letterFrequency = Array(26) { 0 }
-    private val letterRanking = Array(26) { 0 }
+    //private val letterRanking = Array(26) { 0 }
+
     private val wordToScore = mutableMapOf<String, Int>()
 
     // These track what is known about the secret word so far
@@ -124,14 +125,14 @@ class Solver {
         return result
     }
 
-    private fun initLetterRanking() {
-        val maxFrequency = PriorityQueue(compareBy<Char> { c -> letterFrequency[c - 'a'] })
-        maxFrequency.addAll('a' .. 'z')
-
-        var index = 0
-        while (maxFrequency.isNotEmpty()) {
-            letterRanking[maxFrequency.remove() - 'a'] = index + 1
-            index++
-        }
-    }
+//    private fun initLetterRanking() {
+//        val maxFrequency = PriorityQueue(compareBy<Char> { c -> letterFrequency[c - 'a'] })
+//        maxFrequency.addAll('a' .. 'z')
+//
+//        var index = 0
+//        while (maxFrequency.isNotEmpty()) {
+//            letterRanking[maxFrequency.remove() - 'a'] = index + 1
+//            index++
+//        }
+//    }
 }
