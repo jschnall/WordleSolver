@@ -3,7 +3,7 @@ package com.wordle.solver
 fun main(args: Array<String>) {
     println("\n--- Welcome to Wordle Solver ---")
 
-    val solver = Solver()
+    val solver = if (args.isNotEmpty()) Solver(args[0]) else Solver()
 
     println(help())
     do {
@@ -14,6 +14,7 @@ fun main(args: Array<String>) {
             input[0].equals("H", ignoreCase = true) || input[0].equals("HELP", ignoreCase = true) -> println(help())
             input[0].equals("G", ignoreCase = true) || input[0].equals("GUESS", ignoreCase = true) -> println(solver.guess())
             input[0].equals("F", ignoreCase = true) || input[0].equals("FEEDBACK", ignoreCase = true) -> handleFeedback(input, solver)
+            input[0].equals("R", ignoreCase = true) || input[0].equals("RESET", ignoreCase = true) -> println("Remaining word(s) ${solver.reset()}")
             else -> println ("Invalid command")
         }
     } while (true)
@@ -23,8 +24,9 @@ fun main(args: Array<String>) {
 fun help(): String {
     return "\n(Q) Quit: Quit playing\n" +
             "(H) Help: Show this menu\n" +
-            "(G) Guess: Request a guess\n" +
-            "(F) Feedback: Give feedback on last guess. Example: \"f adieu 11020\"\n"
+            "(G) Guess: Show top 5 guesses\n" +
+            "(F) Feedback: Give feedback on last guess. Example: \"f adieu 11020\"\n" +
+            "(R) Reset: Reset the solver state for a new puzzle"
 }
 
 fun feedbackHelp(): String {

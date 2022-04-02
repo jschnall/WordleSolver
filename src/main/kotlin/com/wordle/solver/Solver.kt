@@ -1,9 +1,10 @@
 package com.wordle.solver
 
 import java.io.File
+import java.io.FileNotFoundException
 import java.util.*
 
-class Solver {
+class Solver(path: String = "") {
     private var available: Set<String> = emptySet()
     /**
      *  Indexes the set of all words containing a specific letter by the index it's located at
@@ -18,17 +19,24 @@ class Solver {
     private val wordToScore = mutableMapOf<String, Int>()
 
     // These track what is known about the secret word so far
-    // only necessary if you want to print this info to the user
+    // only needed if you want to print this info to the user
+//    private val guesses = mutableListOf<String>()
 //    private val indicesWithLetter = mutableMapOf<Char, MutableSet<Int>>()
 //    private val indicesWithoutLetter = mutableMapOf<Char, MutableSet<Int>>()
 //    private val inWord = mutableSetOf<Char>()
 //    private val notInWord = mutableSetOf<Char>()
 
     init {
-        ClassLoader.getSystemClassLoader().getResource("words.txt")!!.path.let { path ->
+        val bufferedReader = if (path.isEmpty()) {
+            this.javaClass.classLoader.getResourceAsStream("com/wordle/solver/words.txt")?.bufferedReader()
+        } else {
+            File(path).bufferedReader()
+        }
+
+        bufferedReader?.let { reader ->
             // First pass: read words from file, build matrix and determine letter frequencies
             val allStrings = mutableSetOf<String>()
-            File(path).forEachLine { word ->
+            reader.forEachLine { word ->
                 allStrings.add(word)
                 word.forEachIndexed { index, c ->
                     matrix[c - 'a'][index].add(word)
@@ -49,7 +57,7 @@ class Solver {
             allStrings.forEach { word ->
                 val counts = mutableMapOf<Char, Int>()
                 var score = 0
-                word.forEachIndexed { index, c ->
+                word.forEach { c ->
                     val count = counts.getOrDefault(c, 0)
                     when (count) {
                         0 -> score += letterFrequency[c - 'a']
@@ -60,6 +68,8 @@ class Solver {
                 wordToScore[word] = score
             }
             println("Assigned scores to words.")
+        } ?: run {
+            throw FileNotFoundException("Can't find words.txt")
         }
     }
 
@@ -123,6 +133,25 @@ class Solver {
         }
 
         return result
+    }
+
+    fun reset(): Int {
+        var allWords = emptySet<String>()
+
+        for (c in 'a' .. 'z') {
+            for (i in 0 until 5) {
+                allWords = allWords.union(matrix[c - 'a'][i])
+            }
+        }
+        available = allWords
+
+//        guesses.clear()
+//        indicesWithLetter.clear()
+//        indicesWithoutLetter.clear()
+//        inWord.clear()
+//        notInWord.clear()
+
+        return available.size
     }
 
 //    private fun initLetterRanking() {
