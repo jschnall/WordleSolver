@@ -14,7 +14,7 @@ fun main(args: Array<String>) {
             input[0].equals("H", ignoreCase = true) || input[0].equals("HELP", ignoreCase = true) -> println(help())
             input[0].equals("G", ignoreCase = true) || input[0].equals("GUESS", ignoreCase = true) -> println(solver.guess())
             input[0].equals("F", ignoreCase = true) || input[0].equals("FEEDBACK", ignoreCase = true) -> handleFeedback(input, solver)
-            input[0].equals("R", ignoreCase = true) || input[0].equals("RESET", ignoreCase = true) -> println("Remaining word(s) ${solver.reset()}")
+            input[0].equals("R", ignoreCase = true) || input[0].equals("RESET", ignoreCase = true) -> println("${solver.reset()} word(s) remain")
             else -> println ("Invalid command")
         }
     } while (true)
@@ -45,7 +45,7 @@ fun handleFeedback(input: List<String>, solver: Solver) {
         return
     }
 
-    println("Remaining word(s) ${solver.update(input[1], input[2])}")
+    println("${solver.update(input[1], input[2])} word(s) remain")
     println(solver.guess())
 }
 

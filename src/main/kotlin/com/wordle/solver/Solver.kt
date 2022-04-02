@@ -11,11 +11,6 @@ class Solver(path: String = "") {
      *  To get all words containing some letter union each set in that row
      */
     private val matrix = Array(26) { Array(5) { mutableSetOf<String>() } }
-
-    // The number of times each letter occurs in the word list
-    private val letterFrequency = Array(26) { 0 }
-    //private val letterRanking = Array(26) { 0 }
-
     private val wordToScore = mutableMapOf<String, Int>()
 
     // These track what is known about the secret word so far
@@ -34,39 +29,18 @@ class Solver(path: String = "") {
         }
 
         bufferedReader?.let { reader ->
-            // First pass: read words from file, build matrix and determine letter frequencies
+            // Read words from file, build matrix and determine letter frequencies
             val allStrings = mutableSetOf<String>()
             reader.forEachLine { word ->
                 allStrings.add(word)
                 word.forEachIndexed { index, c ->
                     matrix[c - 'a'][index].add(word)
-                    letterFrequency[c - 'a']++
                 }
             }
             available = allStrings
             println("Loaded ${allStrings.size} words.")
 
-            //initLetterRanking()
-            //println("Letter Frequency: ${letterFrequency.contentDeepToString()}")
-            //println("Letter Ranking: ${letterRanking.contentDeepToString()}")
-
-            // If a letter appears more than once in the word, it should be valued less than the first appearance of any other letter
-            val divisor = letterFrequency.maxOf { it } / (letterFrequency.minOf { it } - 2)
-
-            // Second pass: loop through words in memory to build wordToScore map
-            allStrings.forEach { word ->
-                val counts = mutableMapOf<Char, Int>()
-                var score = 0
-                word.forEach { c ->
-                    val count = counts.getOrDefault(c, 0)
-                    when (count) {
-                        0 -> score += letterFrequency[c - 'a']
-                        1 -> score += letterFrequency[c - 'a'] / divisor
-                    }
-                    counts[c] = count + 1
-                }
-                wordToScore[word] = score
-            }
+            scoreWords()
             println("Assigned scores to words.")
         } ?: run {
             throw FileNotFoundException("Can't find words.txt")
@@ -117,18 +91,53 @@ class Solver(path: String = "") {
                 }
             }
         }
+
+        // recalculate word scores to reflect only the words remaining
+        scoreWords()
+
         return available.size
     }
 
-    fun guess(): List<String> {
+    private fun scoreWords() {
+        val letterFrequency = Array(26) { 0 }
+        // First pass: determine letter frequencies
+        available.forEach { word ->
+            word.forEachIndexed { index, c ->
+                letterFrequency[c - 'a']++
+            }
+        }
+
+        // If a letter appears more than once in the word, it should be valued less than the first appearance of any other letter
+        val divisor = letterFrequency.maxOf { it } / (letterFrequency.minOf { it } - 1)
+
+        // Second pass: loop through words in memory to build wordToScore map
+        wordToScore.clear()
+        available.forEach { word ->
+            val counts = mutableMapOf<Char, Int>()
+            var score = 0
+            word.forEach { c ->
+                val count = counts.getOrDefault(c, 0)
+                when (count) {
+                    0 -> score += letterFrequency[c - 'a']
+                    1 -> score += letterFrequency[c - 'a'] / divisor - 1
+                }
+                counts[c] = count + 1
+            }
+            wordToScore[word] = score
+        }
+    }
+
+    fun guess(): Map<String, Int> {
         // Max Heap of guesses based on the frequency of their individual characters
         val topGuesses = PriorityQueue(compareByDescending<String> { word -> wordToScore[word] })
         topGuesses.addAll(available)
 
-        val result = mutableListOf<String>()
+        val result = mutableMapOf<String, Int>()
         var index = 0
         while (topGuesses.isNotEmpty() && index < 5) {
-            result.add(topGuesses.remove())
+            topGuesses.remove().also {
+                result[it] = wordToScore.getOrDefault(it, 0)
+            }
             index++
         }
 
@@ -144,6 +153,7 @@ class Solver(path: String = "") {
             }
         }
         available = allWords
+        scoreWords()
 
 //        guesses.clear()
 //        indicesWithLetter.clear()
@@ -153,15 +163,4 @@ class Solver(path: String = "") {
 
         return available.size
     }
-
-//    private fun initLetterRanking() {
-//        val maxFrequency = PriorityQueue(compareBy<Char> { c -> letterFrequency[c - 'a'] })
-//        maxFrequency.addAll('a' .. 'z')
-//
-//        var index = 0
-//        while (maxFrequency.isNotEmpty()) {
-//            letterRanking[maxFrequency.remove() - 'a'] = index + 1
-//            index++
-//        }
-//    }
 }
