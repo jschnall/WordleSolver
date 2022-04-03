@@ -3,7 +3,9 @@ package com.wordle.solver
 fun main(args: Array<String>) {
     println("\n--- Welcome to Wordle Solver ---")
 
-    val solver = if (args.isNotEmpty()) Solver(args[0]) else Solver()
+    val wordLength = if (args.isNotEmpty()) args[0].toInt() else 5
+    val path = if (args.size < 2) "" else args[1]
+    val solver = if (args.isNotEmpty()) Solver(wordLength, path) else Solver()
 
     println(help())
     do {
@@ -29,8 +31,8 @@ fun help(): String {
             "(R) Reset: Reset the solver state for a new puzzle"
 }
 
-fun feedbackHelp(): String {
-    return "Usage: \"Feedback { guess } { score }\" where score is composed of 5 digits from 0 to 2.\n" +
+fun feedbackHelp(wordLength: Int): String {
+    return "Usage: \"feedback { guess } { score }\", where score is composed of $wordLength digits from 0 to 2.\n" +
             "0: Wrong letter\n" +
             "1: Correct letter, wrong position\n" +
             "2: Correct letter, correct position\n" +
@@ -38,7 +40,7 @@ fun feedbackHelp(): String {
 }
 
 fun handleFeedback(input: List<String>, solver: Solver) {
-    val errorStr = validateFeedback(input)
+    val errorStr = validateFeedback(input, solver.wordLength)
 
     if (errorStr.isNotEmpty()) {
         println(errorStr)
@@ -49,15 +51,15 @@ fun handleFeedback(input: List<String>, solver: Solver) {
     println(solver.guess())
 }
 
-fun validateFeedback(input: List<String>): String {
+fun validateFeedback(input: List<String>, wordLength: Int): String {
     if (input.size != 3) {
-        return feedbackHelp()
-    } else if (input[1].length != 5) {
-        return "Word must be 5 digits."
+        return feedbackHelp(wordLength)
+    } else if (input[1].length != wordLength) {
+        return "Word must be $wordLength digits."
     } else if (!input[1].matches(regex = Regex("[a-zA-Z]+"))) {
         return "Word must only contain letters"
-    } else if (input[2].length != 5) {
-        return "Score must be 5 digits."
+    } else if (input[2].length != wordLength) {
+        return "Score must be $wordLength digits."
     } else if (!input[2].matches(regex = Regex("[0-2]+"))) {
         return "Score must only contain digits between 0 and 2"
     }
