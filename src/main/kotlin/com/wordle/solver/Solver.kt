@@ -135,7 +135,7 @@ class Solver(val wordLength: Int = 5, path: String = "") {
                 entry.value.forEach { i ->
                     // Adjust percentages to give lower value to words with multiple copies of the same letter
                     frequencyScore *= (letterFrequency[entry.key - 'a'] / entry.value.size - entry.value.size) / tot
-                    frequencyAtIndexScore *= (indexFrequencyOfLetter[i][entry.key - 'a'] / entry.value.size  - entry.value.size) / entry.value.size
+                    frequencyAtIndexScore *= (indexFrequencyOfLetter[i][entry.key - 'a'] / entry.value.size  - entry.value.size) / totAtIndex[i]
                 }
             }
             wordToFrequencyScore[word] = frequencyScore
