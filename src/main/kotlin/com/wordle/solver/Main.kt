@@ -26,7 +26,7 @@ fun main(args: Array<String>) {
 fun help(): String {
     return "\n(Q) Quit: Quit playing\n" +
             "(H) Help: Show this menu\n" +
-            "(G) Guess: Show top 5 guesses\n" +
+            "(G) Guess: Show top 5 guesses in format \"{word} = ( {letterFrequencyScore}, {letterAtPositionFrequencyScore} )\n" +
             "(F) Feedback: Give feedback on last guess. Example: \"f adieu 11020\"\n" +
             "(R) Reset: Reset the solver state for a new puzzle"
 }

@@ -12,8 +12,9 @@ class Solver(val wordLength: Int = 5, path: String = "") {
      *  To get all words containing some letter union each set in that row
      */
     private val matrix = Array(26) { Array(wordLength) { mutableSetOf<String>() } }
-    private val wordToFrequencyScore = mutableMapOf<String, Int>()
-    private val wordToFrequencyAtPositionScore = mutableMapOf<String, Int>()
+    private val wordToFrequencyScore = mutableMapOf<String, Double>()
+    private val wordToFrequencyAtIndexScore = mutableMapOf<String, Double>()
+
 
     // These track what is known about the secret word so far
     // only needed if you want to print this info to the user
@@ -70,11 +71,16 @@ class Solver(val wordLength: Int = 5, path: String = "") {
     private fun findRemaining(available: Set<String>, guess: String, score: String): Set<String> {
         var result = available
 
+        val letterToScores = mutableMapOf<Char, List<Int>>()
         guess.lowercase().forEachIndexed { index, c ->
+            letterToScores[c] = letterToScores.getOrDefault(c, emptyList()).plus(score[index].digitToInt())
             when (score[index]) {
                 '0' -> {
-                    matrix[c - 'a'].forEach { set ->
-                        result = result.subtract(set)
+                    matrix[c - 'a'].forEachIndexed { i, set ->
+                        // special case when giving feedback on word with duplicate letters
+                        if (i == index || guess[i] != c) {
+                            result = result.subtract(set)
+                        }
                     }
                 }
                 '1' -> {
@@ -92,55 +98,61 @@ class Solver(val wordLength: Int = 5, path: String = "") {
             }
         }
 
+        // If there are duplicates of a letter found, filter out any words that don't have at least that many instances of the letter
+        letterToScores.forEach { entry ->
+            // count how many of the letter are present
+            val count = entry.value.count { it > 0 }
+            if (entry.value.count { it > 0 } > 0 ) {
+                result = result.filter { word -> word.count { it == entry.key } >= count }.toSet()
+            }
+        }
+
         return result
     }
 
     private fun scoreWords() {
-        val letterFrequency = Array(26) { 0 }
-        val letterFrequencyAtPosition = Array(wordLength) { Array(26) { 0 } }
+        val letterFrequency = Array(26) { 0.0 }
+        val tot =  available.size * wordLength
+        val indexFrequencyOfLetter = Array(wordLength) { Array(26) { 0.0 } }
+        val totAtIndex =  Array(wordLength) { 0.0 }
         // First pass: determine letter frequencies
         available.forEach { word ->
             word.forEachIndexed { index, c ->
                 letterFrequency[c - 'a']++
-                letterFrequencyAtPosition[index][c - 'a']++
+                indexFrequencyOfLetter[index][c - 'a']++
+                totAtIndex[index]++
             }
         }
-        val letterRankingAtPosition = rankLetterAtPosition(letterFrequencyAtPosition)
 
-        // If a letter appears more than once in the word, it should be valued less than the first appearance of any other letter
-        val divisor = letterFrequency.maxOf { it } / (letterFrequency.minOf { it } - 1)
-
-        // Second pass: loop through words in memory to build wordToScore map
+        // Second pass: loop through available words to build wordToScore map
         wordToFrequencyScore.clear()
-        wordToFrequencyAtPositionScore.clear()
+        wordToFrequencyAtIndexScore.clear()
         available.forEach { word ->
-            val counts = mutableMapOf<Char, Int>()
-            var frequencyScore = 0
-            var frequencyAtPositionScore = 0
-            word.forEachIndexed { index, c ->
-                val count = counts.getOrDefault(c, 0)
-                when (count) {
-                    0 -> frequencyScore += letterFrequency[c - 'a']
-                    1 -> frequencyScore += letterFrequency[c - 'a'] / divisor - 1
+            var frequencyScore = 1.0
+            var frequencyAtIndexScore = 1.0
+            val indicesWithLetter = word.withIndex().groupBy( { it.value }, { it.index } )
+            indicesWithLetter.forEach { entry ->
+                entry.value.forEach { i ->
+                    // Adjust percentages to give lower value to words with multiple copies of the same letter
+                    frequencyScore *= (letterFrequency[entry.key - 'a'] / entry.value.size - entry.value.size) / tot
+                    frequencyAtIndexScore *= (indexFrequencyOfLetter[i][entry.key - 'a'] / entry.value.size  - entry.value.size) / entry.value.size
                 }
-                counts[c] = count + 1
-                frequencyAtPositionScore += letterRankingAtPosition[index][c - 'a']
             }
             wordToFrequencyScore[word] = frequencyScore
-            wordToFrequencyAtPositionScore[word] = frequencyAtPositionScore
+            wordToFrequencyAtIndexScore[word] = frequencyAtIndexScore
         }
     }
 
-    fun guess(): Map<String, Int> {
+    fun guess(): Map<String, Pair<Double, Double>> {
         // Max Heap of guesses based on the frequency of their individual characters
-        val topGuesses = PriorityQueue(compareByDescending<String> { word -> wordToFrequencyScore[word] }.thenByDescending {  word -> wordToFrequencyAtPositionScore[word] })
+        val topGuesses = PriorityQueue(compareByDescending<String> { word -> wordToFrequencyScore[word] }.thenByDescending { word -> wordToFrequencyAtIndexScore[word] } )
         topGuesses.addAll(available)
 
-        val result = mutableMapOf<String, Int>()
+        val result = mutableMapOf<String, Pair<Double, Double>>()
         var index = 0
         while (topGuesses.isNotEmpty() && index < 5) {
-            topGuesses.remove().also {
-                result[it] = wordToFrequencyScore.getOrDefault(it, 0)
+            topGuesses.remove().also { word ->
+                result[word] = Pair(wordToFrequencyScore.getOrDefault(word, 0.0), wordToFrequencyAtIndexScore.getOrDefault(word, 0.0))
             }
             index++
         }
@@ -168,28 +180,42 @@ class Solver(val wordLength: Int = 5, path: String = "") {
         return available.size
     }
 
-    private fun rankLetter(letterFrequency: Array<Int>): Array<Int> {
-        val letterRanking = Array(26) { 0 }
-        val maxFrequency = PriorityQueue(compareBy<Char> { c -> letterFrequency[c - 'a'] })
-        maxFrequency.addAll('a'..'z')
-
-        var index = 0
-        while (maxFrequency.isNotEmpty()) {
-            letterRanking[maxFrequency.remove() - 'a'] = index + 1
-            index++
-        }
-
-        return letterRanking
-    }
-
-    private fun rankLetterAtPosition(letterFrequencyAtPosition: Array<Array<Int>>): Array<Array<Int>> {
-        val letterRankingAtPosition = Array(wordLength) { Array(26) { 0 } }
-
-        letterFrequencyAtPosition.forEachIndexed { index, letterFrequency ->
-            letterRankingAtPosition[index] = rankLetter(letterFrequency)
-        }
-
-        return letterRankingAtPosition
-    }
+//    private fun rankLetters(letterFrequency: Array<Int>): Array<Int> {
+//        val letterRanking = Array(26) { 0 }
+//        val maxFrequency = PriorityQueue(compareBy<Char> { c -> letterFrequency[c - 'a'] })
+//        maxFrequency.addAll('a'..'z')
+//
+//        var index = 0
+//        while (maxFrequency.isNotEmpty()) {
+//            letterRanking[maxFrequency.remove() - 'a'] = index + 1
+//            index++
+//        }
+//
+//        return letterRanking
+//    }
+//
+//    private fun rankIndex(letterFrequency: Array<Int>): Array<Int> {
+//        val letterRanking = Array(wordLength) { 0 }
+//        val maxFrequency = PriorityQueue(compareBy<Int> { i -> letterFrequency[i] })
+//        maxFrequency.addAll(letterFrequency.indices)
+//
+//        var index = 0
+//        while (maxFrequency.isNotEmpty()) {
+//            letterRanking[maxFrequency.remove()] = index + 1
+//            index++
+//        }
+//
+//        return letterRanking
+//    }
+//
+//    private fun rankLettersAtPosition(letterFrequencyAtPosition: Array<Array<Int>>): Array<Array<Int>> {
+//        val letterRankingAtPosition = Array(26) { Array(wordLength) { 0 } }
+//
+//        letterFrequencyAtPosition.forEachIndexed { index, letterFrequency ->
+//            letterRankingAtPosition[index] = rankIndex(letterFrequency)
+//        }
+//
+//        return letterRankingAtPosition
+//    }
 }
 
