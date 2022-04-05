@@ -78,7 +78,7 @@ class Solver(val wordLength: Int = 5, path: String = "") {
                 '0' -> {
                     matrix[c - 'a'].forEachIndexed { i, set ->
                         // special case when giving feedback on word with duplicate letters
-                        if (i == index || guess[i] != c) {
+                        if (i == index || guess.count { it == c } == 1) {
                             result = result.subtract(set)
                         }
                     }
