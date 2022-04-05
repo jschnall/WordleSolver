@@ -143,7 +143,7 @@ class Solver(val wordLength: Int = 5, path: String = "") {
         }
     }
 
-    fun guess(): Map<String, Pair<Double, Double>> {
+    fun guess(exclude: String = ""): Map<String, Pair<Double, Double>> {
         // Max Heap of guesses based on the frequency of their individual characters
         val topGuesses = PriorityQueue(compareByDescending<String> { word -> wordToFrequencyScore[word] }.thenByDescending { word -> wordToFrequencyAtIndexScore[word] } )
         topGuesses.addAll(available)
@@ -152,9 +152,11 @@ class Solver(val wordLength: Int = 5, path: String = "") {
         var index = 0
         while (topGuesses.isNotEmpty() && index < 5) {
             topGuesses.remove().also { word ->
-                result[word] = Pair(wordToFrequencyScore.getOrDefault(word, 0.0), wordToFrequencyAtIndexScore.getOrDefault(word, 0.0))
+                if (!word.any { it in exclude }) {
+                    result[word] = Pair(wordToFrequencyScore.getOrDefault(word, 0.0), wordToFrequencyAtIndexScore.getOrDefault(word, 0.0))
+                    index++
+                }
             }
-            index++
         }
 
         return result
