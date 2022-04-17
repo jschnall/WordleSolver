@@ -90,7 +90,7 @@ class Solver(val wordLength: Int = 5, path: String = "") {
                             row = row.union(set)
                         }
                     }
-                    result = result.intersect(row)
+                    result = result.intersect(row).filter { it[index] != c }.toSet()
                 }
                 '2' -> {
                     result = result.intersect(matrix[c - 'a'][index])
